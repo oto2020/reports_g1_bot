@@ -21,6 +21,6 @@ model Task {
   text          String
   createdAt     DateTime @default(now())
   status        String   @default("planned")
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime @default(now())
   user          User     @relation(fields: [userTelegramId], references: [telegramId])
 }
