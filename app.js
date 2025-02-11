@@ -9,12 +9,12 @@ const STATUS_OPTIONS = ['planned', 'doing', 'done'];
 const CHUNK_SIZE = 10;
 
 bot.setMyCommands([
-    { command: "/tasks_today", description: "Задачи за сегодня" },
-    { command: "/tasks_yesterday", description: "Задачи за вчера" },
-    { command: "/tasks_week", description: "Задачи за эту неделю" },
-    { command: "/tasks_lastweek", description: "Задачи за прошлую неделю" },
-    { command: "/tasks_month", description: "Задачи за этот месяц" },
-    { command: "/tasks_lastmonth", description: "Задачи за прошлый месяц" }
+    { command: "/tasks_today", description: "Задачи по которым работал сегодня" },
+    { command: "/tasks_yesterday", description: "Задачи  по которым работал вчера" },
+    { command: "/tasks_week", description: "Задачи по которым работал на этой неделе" },
+    { command: "/tasks_lastweek", description: "Задачи по которым работал на прошлой неделе" },
+    { command: "/tasks_month", description: "Задачи  по которым работал в этот месяц" },
+    { command: "/tasks_lastmonth", description: "Задачи по которым работал в позапрошлый месяц" }
 ]);
 
 bot.onText(/\/start/, async (msg) => {
