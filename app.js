@@ -87,9 +87,9 @@ bot.on('message', async (msg) => {
             `- Редактировать: /edit${task.id}\n` +
             `- Удалить: /remove${task.id}\n` +
             `- Новый статус:\n` +
-            `🐣 /planned${task.id}\n`+  
-            `👨‍💻 /doing${task.id}\n`+
-            `✅ /done${task.id}\n`+
+            `/planned${task.id} 🐣 \n`+  
+            `/doing${task.id} 👨‍💻 \n`+
+            `/done${task.id} ✅ \n`+
             `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]`
         );
     } catch (e) {
@@ -221,9 +221,9 @@ const formatTasks = (tasks) => {
             `- Редактировать: /edit${task.id}\n` +
             `- Удалить: /remove${task.id}\n` +
             `- Новый статус:\n` +
-            `🐣 /planned${task.id},\n` +
-            `👨‍💻 /doing${task.id},\n` +
-            `✅ /done${task.id}\n` +
+            `/planned${task.id} 🐣 \n` +
+            `/doing${task.id} 👨‍💻 \n` +
+            `/done${task.id} ✅ \n` +
             `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]\n`);
     });
     
