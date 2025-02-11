@@ -87,9 +87,9 @@ bot.on('message', async (msg) => {
             `- Редактировать: /edit${task.id}\n` +
             `- Удалить: /remove${task.id}\n` +
             `- Новый статус:\n` +
-            `"Не в работе 🐣": /planned${task.id}  \n`+  
-            `"Делаю 👨‍💻": /doing${task.id}  \n`+
-            `"Сделано ✅": /done${task.id}  \n`+
+            `Не в работе 🐣: /planned${task.id}  \n`+  
+            `Делаю 👨‍💻: /doing${task.id}  \n`+
+            `Сделано ✅: /done${task.id}  \n`+
             `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]`
         );
     } catch (e) {
@@ -221,9 +221,9 @@ const formatTasks = (tasks) => {
             `- Редактировать: /edit${task.id}\n` +
             `- Удалить: /remove${task.id}\n` +
             `- Новый статус:\n` +
-            `"Не в работе 🐣": /planned${task.id}  \n`+  
-            `"Делаю 👨‍💻": /doing${task.id}  \n`+
-            `"Сделано ✅": /done${task.id}  \n`+
+            `Не в работе 🐣: /planned${task.id}  \n`+  
+            `Делаю 👨‍💻: /doing${task.id}  \n`+
+            `Сделано ✅: /done${task.id}  \n`+
             `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]\n`);
     });
     
