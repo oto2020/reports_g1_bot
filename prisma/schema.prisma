@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("SHADOW_DATABASE_URL")
+}
+
+model User {
+  telegramId BigInt  @id @unique
+  chatId     BigInt
+  name       String
+  phone      String
+  tasks      Task[]
+}
+
+model Task {
+  id            Int      @id @default(autoincrement())
+  userTelegramId BigInt  
+  text          String
+  createdAt     DateTime @default(now())
+  status        String   @default("planned")
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userTelegramId], references: [telegramId])
+}
