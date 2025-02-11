@@ -86,7 +86,10 @@ bot.on('message', async (msg) => {
             `${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
             `- Редактировать: /edit${task.id}\n` +
             `- Удалить: /remove${task.id}\n` +
-            `- Новый статус: 🐣 /planned${task.id}, 👨‍💻 /doing${task.id}, ✅ /done${task.id}\n` +
+            `- Новый статус: 
+            🐣 /planned${task.id}, 
+            👨‍💻 /doing${task.id}, 
+            ✅ /done${task.id}\n` +
             `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]`
         );
     } catch (e) {
@@ -217,7 +220,10 @@ const formatTasks = (tasks) => {
             `${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
             `- Редактировать: /edit${task.id}\n` +
             `- Удалить: /remove${task.id}\n` +
-            `- Новый статус: 🐣 /planned${task.id}, 👨‍💻 /doing${task.id}, ✅ /done${task.id}\n` +
+            `- Новый статус: 
+            🐣 /planned${task.id}, 
+            👨‍💻 /doing${task.id}, 
+            ✅ /done${task.id}\n` +
             `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]\n`);
     });
     
