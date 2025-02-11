@@ -75,21 +75,20 @@ bot.on('message', async (msg) => {
     }
     
     try {
-        await prisma.task.create({
+        const task = await prisma.task.create({
             data: {
                 userTelegramId: telegramId,
                 text,
             }
         });
-        bot.sendMessage(chatId, "Задача добавлена со статусом 'planned'.");
-        `
-Создано: [${task.createdAt.toLocaleString()}]
-Изменено: [${task.updatedAt.toLocaleString()}]
-${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}
-- Редатировать: /edit${task.id}
-- Удалить: /remove${task.id}
-- Статус: 🐣 /planned${task.id}, 👨‍💻 /doing${task.id}, ✅ /done${task.id}
-            `
+        
+        bot.sendMessage(chatId, `Задача добавлена!\n\n` +
+            `${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
+            `- Редактировать: /edit${task.id}\n` +
+            `- Удалить: /remove${task.id}\n` +
+            `- Новый статус: 🐣 /planned${task.id}, 👨‍💻 /doing${task.id}, ✅ /done${task.id}\n` +
+            `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]`
+        );
     } catch (e) {
         bot.sendMessage(chatId, "Ошибка при добавлении задачи.");
     }
@@ -214,18 +213,16 @@ const formatTasks = (tasks) => {
     }, {});
     
     tasks.forEach(task => {
-        grouped[task.status].push(`
-Создано: [${task.createdAt.toLocaleString()}]
-Изменено: [${task.updatedAt.toLocaleString()}]
-${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}
-- Редатировать: /edit${task.id}
-- Удалить: /remove${task.id}
-- Статус: 🐣 /planned${task.id}, 👨‍💻 /doing${task.id}, ✅ /done${task.id}
-            `);
+        grouped[task.status].push(
+            `${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
+            `- Редактировать: /edit${task.id}\n` +
+            `- Удалить: /remove${task.id}\n` +
+            `- Новый статус: 🐣 /planned${task.id}, 👨‍💻 /doing${task.id}, ✅ /done${task.id}\n` +
+            `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]\n`);
     });
     
     return STATUS_OPTIONS.map(status =>
-        grouped[status].length ? `${status==="planned" ? "<--- НЕ В РАБОТЕ --->" : status==="doing" ? "<--- ДЕЛАЮ --->": "<--- ЗАВЕРШЕНО --->"}` + grouped[status].join('\n') : ""
+        grouped[status].length ? `${status==="planned" ? "<--- НЕ В РАБОТЕ --->" : status==="doing" ? "<--- ДЕЛАЮ --->": "<--- ЗАВЕРШЕНО --->"}\n` + grouped[status].join('\n') : ""
     ).filter(Boolean).join('\n\n');
 };
 console.log("Бот запущен!");
