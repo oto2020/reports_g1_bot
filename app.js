@@ -93,11 +93,28 @@ bot.onText(/\/edit(\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const taskId = parseInt(match[1]);
 
-    // Сохраняем задачу в Map
-    editingTasks.set(chatId, taskId);
+    try {
+        // Получаем оригинальный текст задачи
+        const task = await prisma.task.findUnique({
+            where: { id: taskId }
+        });
 
-    bot.sendMessage(chatId, "Введите новый текст для задачи:");
+        if (!task) {
+            bot.sendMessage(chatId, "Задача не найдена.");
+            return;
+        }
+
+        // Сохраняем задачу в Map (чтобы бот знал, что это редактирование)
+        editingTasks.set(chatId, taskId);
+
+        // Отправляем оригинальный текст перед редактированием
+        bot.sendMessage(chatId, `${task.text}`);
+
+    } catch (e) {
+        bot.sendMessage(chatId, "Ошибка при получении задачи.");
+    }
 });
+
 
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
