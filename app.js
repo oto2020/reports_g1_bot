@@ -6,16 +6,44 @@ const prisma = new PrismaClient();
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 
 const STATUS_OPTIONS = ['planned', 'doing', 'done'];
-const CHUNK_SIZE = 10;
+const CHUNK_SIZE = 20;
 
 bot.setMyCommands([
-    { command: "/tasks_today", description: "Задачи по которым работал сегодня" },
-    { command: "/tasks_yesterday", description: "Задачи  по которым работал вчера" },
-    { command: "/tasks_week", description: "Задачи по которым работал на этой неделе" },
-    { command: "/tasks_lastweek", description: "Задачи по которым работал на прошлой неделе" },
-    { command: "/tasks_month", description: "Задачи  по которым работал в этот месяц" },
-    { command: "/tasks_lastmonth", description: "Задачи по которым работал в позапрошлый месяц" }
+    { command: "/actual_tasks", description: "Актуальные задачи (кроме выполненных)" }, // Новая команда
+    { command: "/tasks_today", description: "Все задачи созданные/измененные сегодня" },
+    { command: "/tasks_yesterday", description: "Все задачи  созданные/измененные вчера" },
+    { command: "/tasks_week", description: "Все задачи созданные/измененные на этой неделе" },
+    { command: "/tasks_lastweek", description: "Все задачи созданные/измененные на прошлой неделе" },
+    { command: "/tasks_month", description: "Все задачи  созданные/измененные в этот месяц" },
+    { command: "/tasks_lastmonth", description: "Все задачи созданные/измененные в позапрошлый месяц" },
 ]);
+
+const getActualTasks = async (telegramId) => {
+    return prisma.task.findMany({
+        where: {
+            userTelegramId: telegramId,
+            status: { not: "done" } // Исключаем задачи со статусом "done"
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+};
+
+bot.onText(/\/actual_tasks/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = msg.from.id;
+
+    const tasks = await getActualTasks(telegramId);
+    if (tasks.length === 0) {
+        bot.sendMessage(chatId, "Нет актуальных задач.");
+        return;
+    }
+
+    const messages = chunkTasks(formatTasks(tasks), 10);
+    for (const message of messages) {
+        bot.sendMessage(chatId, message);
+    }
+});
+
 
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
@@ -82,21 +110,32 @@ bot.on('message', async (msg) => {
             }
         });
         
-        bot.sendMessage(chatId, `Задача добавлена!\n\n` +
-            `${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
-            `- Редактировать: /edit${task.id}\n` +
-            `- Удалить: /remove${task.id}\n` +
-            `- Новый статус:\n` +
-            `Не в работе 🐣: /planned${task.id}  \n`+  
-            `Делаю 👨‍💻: /doing${task.id}  \n`+
-            `Сделано ✅: /done${task.id}  \n`+
-            `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]`
+        bot.sendMessage(chatId, `Задача добавлена!\n\n`+ generateTaskString(task)   
         );
     } catch (e) {
         bot.sendMessage(chatId, "Ошибка при добавлении задачи.");
     }
     
 });
+
+const options = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Moscow' };
+const formatDate = (date) => date.toLocaleString('ru-RU', options).replace('.', '').replace(',', '');
+generateTaskString = (task) => {
+    const dateStr = `[${formatDate(task.createdAt)} - ${formatDate(task.updatedAt)}]`;
+    return `${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
+        `- Редактировать: /edit${task.id}\n` +
+        `- Удалить: /remove${task.id}\n` +
+        `Новый статус:\n` +
+        `- Не в работе /planned${task.id} \n`+  //🐣
+        `- Делаю /doing${task.id}  \n`+ //👨‍💻
+        `- Сделано /done${task.id} \n`+ //✅
+        `${dateStr}`
+}
+const sortTasks = (tasks) => {
+    const order = { "done": 1, "planned": 2, "doing": 3 };
+
+    return tasks.sort((a, b) => order[a.status] - order[b.status]);
+};
 
 bot.onText(/\/edit(\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
@@ -195,40 +234,32 @@ bot.onText(/\/tasks_(today|yesterday|week|lastweek|month|lastmonth)/, async (msg
     const chatId = msg.chat.id;
     const period = match[1];
     const telegramId = msg.from.id;
-    
-    console.log(period);
+
     const tasks = await getTasks(telegramId, period);
     if (tasks.length === 0) {
         bot.sendMessage(chatId, "Нет задач за выбранный период.");
         return;
     }
-    
-    const messages = formatTasks(tasks).match(/(.|\n){1,4096}/g);
+
+    const messages = chunkTasks(formatTasks(tasks), 10);
     for (const message of messages) {
         bot.sendMessage(chatId, message);
     }
 });
 
 const formatTasks = (tasks) => {
-    const grouped = STATUS_OPTIONS.reduce((acc, status) => {
-        acc[status] = [];
-        return acc;
-    }, {});
-    
-    tasks.forEach(task => {
-        grouped[task.status].push(
-            `${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
-            `- Редактировать: /edit${task.id}\n` +
-            `- Удалить: /remove${task.id}\n` +
-            `- Новый статус:\n` +
-            `Не в работе 🐣: /planned${task.id}  \n`+  
-            `Делаю 👨‍💻: /doing${task.id}  \n`+
-            `Сделано ✅: /done${task.id}  \n`+
-            `[${task.createdAt.toLocaleDateString()} - ${task.updatedAt.toLocaleDateString()}]\n`);
-    });
-    
-    return STATUS_OPTIONS.map(status =>
-        grouped[status].length ? `${status==="planned" ? "<--- НЕ В РАБОТЕ --->" : status==="doing" ? "<--- ДЕЛАЮ --->": "<--- ЗАВЕРШЕНО --->"}\n` + grouped[status].join('\n') : ""
-    ).filter(Boolean).join('\n\n');
+    let tasksStrings = sortTasks(tasks).map(task => generateTaskString(task));
+    return tasksStrings;
 };
+
+const chunkTasks = (tasksArray, chunkSize) => {
+    let result = [];
+    for (let i = 0; i < tasksArray.length; i += chunkSize) {
+        result.push(tasksArray.slice(i, i + chunkSize).join("\n\n"));
+    }
+    return result;
+};
+
+
+
 console.log("Бот запущен!");
