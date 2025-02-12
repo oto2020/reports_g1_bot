@@ -7,6 +7,7 @@ const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 
 const STATUS_OPTIONS = ['planned', 'doing', 'done'];
 const CHUNK_SIZE = 20;
+const editingTasks = new Map(); // Храним текущие редактируемые задачи
 
 bot.setMyCommands([
     { command: "/actual_tasks", description: "Актуальные задачи (кроме выполненных)" }, // Новая команда
@@ -88,20 +89,56 @@ bot.on('contact', async (msg) => {
     }
 });
 
+bot.onText(/\/edit(\d+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const taskId = parseInt(match[1]);
+
+    // Сохраняем задачу в Map
+    editingTasks.set(chatId, taskId);
+
+    bot.sendMessage(chatId, "Введите новый текст для задачи:");
+});
+
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const telegramId = msg.from.id;
     const text = msg.text;
-    
+
+    // Проверяем, редактируется ли сейчас задача
+    if (editingTasks.has(chatId)) {
+        const taskId = editingTasks.get(chatId);
+        editingTasks.delete(chatId); // Удаляем флаг редактирования
+
+        // Проверяем, что это не команда
+        if (text.startsWith('/')) {
+            bot.sendMessage(chatId, "Редактирование отменено.");
+            return;
+        }
+
+        try {
+            const updatedTask = await prisma.task.update({
+                where: { id: taskId },
+                data: { text: text, updatedAt: new Date() }
+            });
+
+            bot.sendMessage(chatId, `Текст задачи обновлен:\n\n` + generateTaskString(updatedTask));
+        } catch (e) {
+            bot.sendMessage(chatId, "Ошибка при обновлении задачи.");
+        }
+
+        return; // Выходим из обработчика, чтобы не создавать новую задачу
+    }
+
+    // Игнорируем команды
     if (!text || text.startsWith('/')) return;
-    
+
     let user = await prisma.user.findUnique({ where: { telegramId } });
-    
+
     if (!user) {
         bot.sendMessage(chatId, "Пожалуйста, сначала поделитесь своим контактом.");
         return;
     }
-    
+
     try {
         const task = await prisma.task.create({
             data: {
@@ -109,27 +146,25 @@ bot.on('message', async (msg) => {
                 text,
             }
         });
-        
-        bot.sendMessage(chatId, `Задача добавлена!\n\n`+ generateTaskString(task)   
-        );
+
+        bot.sendMessage(chatId, `Задача добавлена!\n\n` + generateTaskString(task));
     } catch (e) {
         bot.sendMessage(chatId, "Ошибка при добавлении задачи.");
     }
-    
 });
+
 
 const options = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Moscow' };
 const formatDate = (date) => date.toLocaleString('ru-RU', options).replace('.', '').replace(',', '');
 generateTaskString = (task) => {
-    const dateStr = `[${formatDate(task.createdAt)} - ${formatDate(task.updatedAt)}]`;
-    return `${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
-        `- Редактировать: /edit${task.id}\n` +
+    const dateStr = `${formatDate(task.createdAt)} - ${formatDate(task.updatedAt)}`;
+    return `(${dateStr})\n${task.status === "done" ? "✅": task.status === "doing"? "👨‍💻": "🐣"} ${task.text}\n` +
+        `- Ред.: /edit${task.id}\n` +
         `- Удалить: /remove${task.id}\n` +
         `Новый статус:\n` +
-        `- Не в работе /planned${task.id} \n`+  //🐣
-        `- Делаю /doing${task.id}  \n`+ //👨‍💻
-        `- Сделано /done${task.id} \n`+ //✅
-        `${dateStr}`
+        `- /planned${task.id} \n`+  //🐣
+        `- /doing${task.id}  \n`+ //👨‍💻
+        `- /done${task.id} \n` //✅
 }
 const sortTasks = (tasks) => {
     const order = { "done": 1, "planned": 2, "doing": 3 };
@@ -137,23 +172,7 @@ const sortTasks = (tasks) => {
     return tasks.sort((a, b) => order[a.status] - order[b.status]);
 };
 
-bot.onText(/\/edit(\d+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const taskId = parseInt(match[1]);
-    
-    bot.sendMessage(chatId, "Введите новый текст для задачи:");
-    bot.once('message', async (newMsg) => {
-        try {
-            await prisma.task.update({
-                where: { id: taskId },
-                data: { text: newMsg.text }
-            });
-            bot.sendMessage(chatId, "Текст задачи обновлен.");
-        } catch (e) {
-            bot.sendMessage(chatId, "Ошибка при обновлении задачи.");
-        }
-    });
-});
+
 
 bot.onText(/\/(done|doing|planned)(\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
